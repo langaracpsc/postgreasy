@@ -126,7 +126,7 @@ class Database:
 
         return tupleStack
 
-    def GetFieldNames(self, table: str):
+    def GetFieldNames(self, table: str) -> list:
         fieldStack = list()
         result = self.FetchQueryData(f"""
             SELECT column_name FROM information_schema.columns WHERE table_name=\'{table}\';
@@ -139,13 +139,23 @@ class Database:
     def InsertRecord(self, record: tuple, table: str):
         self.ExecuteCommand(f"INSERT INTO {table} VALUES{DBTools.GetSQLValueString(record)}")
 
-        return
+        return bool(1)
 
-    def UpdateRecord(self, record: dict, condition: dict, table: str):
-        if (not(Tools.IsSubSet(list(record.keys()), self.GetFieldNames(table))) or not(Tools.IsSubSet(list(condition.keys()), self.GetFieldNames(table)))):
+    def UpdateRecord(self, record: dict, condition: dict, table: str)->bool:
+        fieldNames = self.GetFieldNames(table)
+
+        if (not(Tools.IsSubSet(list(record.keys()), fieldNames)) or not(Tools.IsSubSet(list(condition.keys()), fieldNames))):
             raise BaseException("Field names of the provided record dont match the fields of the table.")
 
         self.ExecuteCommand(f"UPDATE {table} SET {DBTools.GetSQLSetString(record)} WHERE {DBTools.GetSQLSetString(condition)};")
+        return bool(1)
+
+    def DeleteRecord(self, condition: dict, table: str):
+        if (not(Tools.IsSubSet(list(condition.keys()), self.GetFieldNames(table)))):
+            raise BaseException("Field names of the provided record dont match the fields of the table.")
+        print(f"DELETE FROM {table} WHERE {DBTools.GetSQLSetString(condition)};")
+        self.ExecuteCommand(f"DELETE FROM {table} WHERE {DBTools.GetSQLSetString(condition)};")
+        return bool(0)
 
 def Main(args: list):
     db = Database("config.json")
@@ -153,7 +163,7 @@ def Main(args: list):
     #db.InsertRecord(tuple((Tools.TrimString(str(uuid.uuid4()), 36), args[1])), args[2])
     print(db.FetchQueryData("SELECT * FROM test;"))
     print(db.GetFieldNames("test"))
-    db.UpdateRecord(dict({ "val": args[3] }), dict({args[1]: args[2]}), "test")
+    db.DeleteRecord(dict({args[1]: args[2]}), "test")
 
     db.Disconnect()
 
